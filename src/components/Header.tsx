@@ -33,12 +33,6 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/kontakty"
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
-          >
-            Оставить заявку
-          </Link>
         </nav>
 
         {/* Mobile menu button */}
@@ -72,13 +66,6 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/kontakty"
-            onClick={() => setMenuOpen(false)}
-            className="mt-2 block rounded-lg bg-primary px-5 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
-          >
-            Оставить заявку
-          </Link>
         </nav>
       )}
     </header>

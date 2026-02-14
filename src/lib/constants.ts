@@ -235,11 +235,6 @@ export const CONTACT_INFO = {
       value: "info@zakazhidetal.ru",
       href: "mailto:info@zakazhidetal.ru",
     },
-    {
-      title: "Everypart (глобальная платформа)",
-      value: "everypart.pro",
-      href: "https://everypart.pro",
-    },
   ],
 };
 
