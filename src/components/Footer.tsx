@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { SITE, FOOTER } from "@/lib/constants";
 
@@ -8,8 +9,14 @@ export default function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <Link href="/" className="text-xl font-bold text-foreground">
-              {SITE.name}
+            <Link href="/">
+              <Image
+                src="/logo.png"
+                alt="ЗакажиДеталь"
+                width={280}
+                height={48}
+                className="h-12 w-auto"
+              />
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">
               {FOOTER.tagline}
@@ -47,16 +54,6 @@ export default function Footer() {
                   className="text-sm text-muted transition-colors hover:text-foreground"
                 >
                   {SITE.email}
-                </a>
-              </li>
-              <li>
-                <a
-                  href={SITE.epLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted transition-colors hover:text-foreground"
-                >
-                  everypart.pro
                 </a>
               </li>
             </ul>

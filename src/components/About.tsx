@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { ABOUT } from "@/lib/constants";
 
 const whyIcons = [
@@ -48,22 +49,15 @@ export default function About() {
 
           {/* Right column */}
           <div className="space-y-8">
-            <div className="flex h-64 items-center justify-center rounded-2xl bg-surface lg:h-72">
-              <div className="text-center text-muted">
-                <svg
-                  className="mx-auto h-16 w-16 text-primary/30"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1}
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"
-                  />
-                </svg>
-              </div>
+            <div className="overflow-hidden rounded-2xl">
+              <Image
+                src="/about-engine.jpg"
+                alt="Производство деталей"
+                width={600}
+                height={288}
+                className="h-64 w-full object-cover lg:h-72"
+                quality={85}
+              />
             </div>
 
             <div className="rounded-xl border border-border bg-surface p-8 lg:p-10">

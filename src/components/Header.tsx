@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { NAV_LINKS, SITE } from "@/lib/constants";
+import { NAV_LINKS } from "@/lib/constants";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -10,8 +11,15 @@ export default function Header() {
   return (
     <header className="fixed top-0 z-50 w-full border-b border-border bg-white/90 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="text-xl font-bold text-foreground">
-          {SITE.name}
+        <Link href="/">
+          <Image
+            src="/logo.png"
+            alt="ЗакажиДеталь"
+            width={280}
+            height={48}
+            className="h-12 w-auto"
+            priority
+          />
         </Link>
 
         {/* Desktop nav */}

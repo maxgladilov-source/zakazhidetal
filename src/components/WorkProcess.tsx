@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { WORK_PROCESS } from "@/lib/constants";
 
@@ -18,6 +19,15 @@ const stepIcons = [
 export default function WorkProcess() {
   return (
     <section className="relative overflow-hidden bg-foreground py-20 lg:py-28">
+      <div className="pointer-events-none absolute inset-0 opacity-15">
+        <Image
+          src="/cta-bg.jpg"
+          alt=""
+          fill
+          className="object-cover"
+          quality={75}
+        />
+      </div>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground via-foreground/80 to-foreground/60" />
 
       <div className="relative mx-auto max-w-6xl px-6">

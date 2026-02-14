@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { HERO } from "@/lib/constants";
 
@@ -16,6 +17,17 @@ export default function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-foreground pt-32 pb-20 lg:pt-40 lg:pb-28">
+      {/* Background image */}
+      <div className="pointer-events-none absolute inset-0 opacity-20">
+        <Image
+          src="/hero-bg.jpg"
+          alt=""
+          fill
+          className="object-cover"
+          priority
+          quality={75}
+        />
+      </div>
       {/* Gradient overlay */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-foreground/90 via-foreground/70 to-foreground/50" />
 
