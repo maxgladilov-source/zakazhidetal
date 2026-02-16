@@ -1,19 +1,35 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { HERO } from "@/lib/constants";
 
+function shuffle<T>(array: T[]): T[] {
+  const a = [...array];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export default function Hero() {
+  const shuffledRef = useRef<string[] | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    shuffledRef.current = shuffle(HERO.rotatingWords);
+    setCurrentIndex(0);
+
     const interval = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % HERO.rotatingWords.length);
     }, 2500);
     return () => clearInterval(interval);
   }, []);
+
+  const words = shuffledRef.current ?? HERO.rotatingWords;
+  const currentWord = words[currentIndex];
 
   return (
     <section className="relative overflow-hidden bg-foreground pt-32 pb-20 lg:pt-40 lg:pb-28">
@@ -39,12 +55,13 @@ export default function Hero() {
           <h1 className="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
             {HERO.title}
             <br />
-            <span className="relative inline-block h-[1.15em] overflow-hidden text-blue-400">
+            <span className="relative inline-block h-[2.5em] overflow-hidden text-blue-400" suppressHydrationWarning>
               <span
                 key={currentIndex}
                 className="animate-word-rotate inline-block"
+                suppressHydrationWarning
               >
-                {HERO.rotatingWords[currentIndex]}
+                {currentWord}
               </span>
             </span>
           </h1>
