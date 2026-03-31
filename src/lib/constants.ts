@@ -9,6 +9,7 @@ export const SITE = {
 export const NAV_LINKS = [
   { label: "О компании", href: "/o-kompanii" },
   { label: "Услуги", href: "/uslugi" },
+  { label: "Оставить заявку", href: "/zayavka" },
   { label: "Контакты", href: "/kontakty" },
 ];
 
