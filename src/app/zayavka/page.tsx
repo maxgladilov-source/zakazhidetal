@@ -4,36 +4,11 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
-const TECHNOLOGIES = [
-  { id: "cnc_milling", label: "Фрезеровка ЧПУ" },
-  { id: "cnc_turning", label: "Токарная ЧПУ" },
-  { id: "cnc_multi_axis", label: "Многоосевая ЧПУ" },
-  { id: "sheet_laser", label: "Лазерная резка" },
-  { id: "sheet_bending", label: "Гибка" },
-  { id: "sheet_welding", label: "Сварка" },
-  { id: "3d_fdm", label: "3D-печать FDM" },
-  { id: "3d_sla", label: "3D-печать SLA" },
-  { id: "3d_sls", label: "3D-печать SLS" },
-  { id: "injection_molding", label: "Литьё под давлением" },
-  { id: "vacuum_casting", label: "Вакуумное литьё" },
-  { id: "die_casting", label: "Литьё в кокиль" },
-  { id: "surface_anodizing", label: "Анодирование" },
-  { id: "surface_powder_coat", label: "Порошковая окраска" },
-];
-
-const MATERIALS = [
-  { id: "al6061", label: "Алюминий 6061" },
-  { id: "al7075", label: "Алюминий 7075" },
-  { id: "steel_45", label: "Сталь 45" },
-  { id: "steel_304", label: "Нержавеющая 304" },
-  { id: "steel_316", label: "Нержавеющая 316" },
-  { id: "titanium_gr5", label: "Титан Grade 5" },
-  { id: "copper_c110", label: "Медь" },
-  { id: "brass_c360", label: "Латунь" },
-  { id: "abs", label: "ABS" },
-  { id: "pa_nylon", label: "Нейлон (PA)" },
-  { id: "pc", label: "Поликарбонат (PC)" },
-  { id: "pom", label: "POM (Делрин)" },
+const DELIVERY_OPTIONS = [
+  { id: "warehouse_china", label: "Со склада EveryPart в Китае (самовывоз / своя логистика)" },
+  { id: "warehouse_moscow", label: "Со склада в Москве" },
+  { id: "door_delivery", label: "Доставка до двери (включая растаможку)" },
+  { id: "undecided", label: "Пока не определился — нужна консультация" },
 ];
 
 const API_URL = process.env.NEXT_PUBLIC_EVERYPART_API || "https://app.everypart.tech";
@@ -54,11 +29,11 @@ export default function ZayavkaPage() {
 
   // Step 2 — parameters
   const [title, setTitle] = useState("");
-  const [technologyId, setTechnologyId] = useState("");
-  const [materialId, setMaterialId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [deadline, setDeadline] = useState("");
   const [budgetMax, setBudgetMax] = useState("");
+  const [budgetType, setBudgetType] = useState<"per_unit" | "per_batch">("per_batch");
+  const [deliveryOption, setDeliveryOption] = useState("undecided");
 
   // Step 3 — description
   const [freeText, setFreeText] = useState("");
@@ -80,12 +55,15 @@ export default function ZayavkaPage() {
           phone,
           companyName,
           title,
-          technologyId: technologyId || undefined,
-          materialId: materialId || undefined,
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
+          budgetCurrency: "RUB",
           deadlineDesired: deadline || undefined,
-          freeText,
+          freeText: [
+            freeText,
+            budgetType === "per_unit" && budgetMax ? `[Бюджет за единицу: ${budgetMax} ₽]` : "",
+            deliveryOption !== "undecided" ? `[Доставка: ${DELIVERY_OPTIONS.find(d => d.id === deliveryOption)?.label}]` : "",
+          ].filter(Boolean).join("\n"),
         }),
       });
 
@@ -248,37 +226,9 @@ export default function ZayavkaPage() {
           {step === 2 && (
             <div className="mt-6 space-y-4">
               <p className="text-sm text-muted">
-                Заполните что знаете — остальное уточним позже.
+                Заполните что знаете — остальное уточним позже. Технологию и материалы определим вместе с вами после анализа документации.
               </p>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground">Технология</label>
-                  <select
-                    value={technologyId}
-                    onChange={(e) => setTechnologyId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  >
-                    <option value="">Не выбрана</option>
-                    {TECHNOLOGIES.map((t) => (
-                      <option key={t.id} value={t.id}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground">Материал</label>
-                  <select
-                    value={materialId}
-                    onChange={(e) => setMaterialId(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  >
-                    <option value="">Не выбран</option>
-                    {MATERIALS.map((m) => (
-                      <option key={m.id} value={m.id}>{m.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">Количество</label>
                   <input
@@ -291,24 +241,61 @@ export default function ZayavkaPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground">Бюджет (макс)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                    placeholder="₽"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground">Срок</label>
+                  <label className="block text-sm font-medium text-foreground">Желаемый срок поставки</label>
                   <input
                     type="date"
                     value={deadline}
                     onChange={(e) => setDeadline(e.target.value)}
                     className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
                   />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground">Бюджет</label>
+                <div className="mt-1 flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    placeholder="Сумма, ₽"
+                    className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                  />
+                  <select
+                    value={budgetType}
+                    onChange={(e) => setBudgetType(e.target.value as "per_unit" | "per_batch")}
+                    className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                  >
+                    <option value="per_batch">за всю партию</option>
+                    <option value="per_unit">за единицу</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-foreground">Приёмка и доставка</label>
+                <div className="mt-2 space-y-2">
+                  {DELIVERY_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        deliveryOption === opt.id
+                          ? "border-primary bg-blue-50"
+                          : "border-border hover:border-muted"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="delivery"
+                        value={opt.id}
+                        checked={deliveryOption === opt.id}
+                        onChange={(e) => setDeliveryOption(e.target.value)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm">{opt.label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
