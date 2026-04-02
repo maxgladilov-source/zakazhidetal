@@ -530,7 +530,7 @@ export default function ZayavkaPage() {
                 <div className="space-y-2">
                   {[
                     { id: "supplier", label: "Контроль поставщика", desc: "Завод проверяет качество по своим стандартам" },
-                    { id: "everypart", label: "Проверка EveryPart", desc: "Наши специалисты дополнительно проверят партию перед отгрузкой" },
+                    { id: "everypart", label: "Проверка EveryPart", desc: "Наши специалисты дополнительно проверят партию в КНР перед отгрузкой" },
                     { id: "customer_rep", label: "Приёмка вашим представителем", desc: "Ваш представитель в Китае лично примет партию" },
                   ].map((opt) => (
                     <label
