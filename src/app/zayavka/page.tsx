@@ -263,6 +263,8 @@ export default function ZayavkaPage() {
           <h1 className="text-3xl font-bold text-foreground">Оставить заявку</h1>
           <p className="mt-2 text-muted">
             Опишите вашу задачу — мы подберём оптимальное решение и свяжемся с вами.
+            Эта форма — для заявки на изготовление партии деталей одного типа.
+            Если в вашем заказе несколько позиций — <a href="https://app.everypart.tech/register" className="underline hover:text-foreground">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа.
           </p>
 
           {error && (
@@ -270,11 +272,6 @@ export default function ZayavkaPage() {
               {error}
             </div>
           )}
-
-          <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-            Эта форма — для заявки на изготовление партии деталей <strong>одного типа</strong>.
-            Если в вашем заказе несколько позиций — <a href="https://app.everypart.tech/register" className="underline font-medium">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа с несколькими позициями.
-          </div>
 
           <div className="mt-8 space-y-6">
 
