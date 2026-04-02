@@ -563,7 +563,8 @@ export default function ZayavkaPage() {
                 <label className={labelCls + " mb-2"}>Объём проверки</label>
                 <div className="space-y-2">
                   {[
-                    { id: "sampling", label: "Выборочная проверка", desc: "Проверяется часть партии — стандартный подход для серийного производства" },
+                    { id: "sampling", label: "Выборочная проверка по стандарту", desc: "Проверяется часть партии по утверждённому стандарту (укажите ниже)" },
+                    { id: "sampling_custom", label: "Выборочная проверка по своим параметрам", desc: "Проверка по вашим критериям — укажите требования в описании заказа" },
                     { id: "full", label: "Сплошной контроль (100%)", desc: "Проверяется каждая деталь — для ответственных изделий" },
                     { id: "combined", label: "Комбинированный", desc: "100% проверка ключевых параметров, выборочная по остальным" },
                   ].map((opt) => (
@@ -658,7 +659,7 @@ export default function ZayavkaPage() {
                       </div>
                     </label>
 
-                    {/* AQL level — only if sampling selected */}
+                    {/* AQL level — only if standard sampling selected */}
                     {qcScope === "sampling" && (
                       <div>
                         <label className={labelCls}>Уровень приёмки (AQL)</label>
