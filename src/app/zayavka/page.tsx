@@ -51,10 +51,17 @@ export default function ZayavkaPage() {
   const [quantity, setQuantity] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
+  // NDA
+  const [ndaAccepted, setNdaAccepted] = useState(false);
+
   // Commercial
+  const [orderStrategy, setOrderStrategy] = useState("best_price");
   const [budgetMax, setBudgetMax] = useState("");
   const [budgetType, setBudgetType] = useState<"per_unit" | "per_batch">("per_batch");
+  const [budgetCurrency, setBudgetCurrency] = useState("RUB");
   const [deadline, setDeadline] = useState("");
+  const [needPilot, setNeedPilot] = useState<"yes" | "no" | "undecided">("undecided");
+  const [incoterms, setIncoterms] = useState("none");
 
   // QC
   const [qcType, setQcType] = useState("supplier");
@@ -68,7 +75,8 @@ export default function ZayavkaPage() {
   // Delivery
   const [deliveryOption, setDeliveryOption] = useState("undecided");
 
-  const canSubmit = fullName.trim() && email.trim() && emailVerified && title.trim();
+  const isChinaDelivery = deliveryOption === "warehouse_china";
+  const canSubmit = ndaAccepted && fullName.trim() && email.trim() && emailVerified && title.trim();
 
   // --- Email verification ---
   const sendEmailCode = () => {
@@ -117,7 +125,10 @@ export default function ZayavkaPage() {
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
           budgetType,
-          budgetCurrency: "RUB",
+          budgetCurrency: isChinaDelivery ? budgetCurrency : "RUB",
+          orderStrategy,
+          needPilot: needPilot !== "undecided" ? needPilot : undefined,
+          incoterms: isChinaDelivery && incoterms !== "none" ? incoterms : undefined,
           deliveryOption: deliveryOption !== "undecided" ? deliveryOption : undefined,
           deadlineDesired: deadline || undefined,
           freeText: freeText || undefined,
@@ -206,6 +217,48 @@ export default function ZayavkaPage() {
           )}
 
           <div className="mt-8 space-y-6">
+
+            {/* ══════ 0. NDA / Оферта ══════ */}
+            <section className={`${sectionCls} ${ndaAccepted ? "border-green-200 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}`}>
+              <h2 className={sectionTitleCls}>Соглашение о конфиденциальности</h2>
+              <div className="text-sm text-foreground space-y-2 mb-4">
+                <p>
+                  Перед отправкой персональных данных и технической документации необходимо
+                  принять условия соглашения о конфиденциальности (NDA).
+                </p>
+                <div className="rounded-lg border border-border bg-white p-4 text-xs text-muted max-h-40 overflow-y-auto">
+                  <p className="font-semibold text-foreground mb-2">Основные положения:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Вся предоставленная техническая документация (чертежи, 3D-модели, спецификации) является конфиденциальной информацией Заказчика.</li>
+                    <li>EveryPart обязуется не передавать документацию третьим лицам без письменного согласия Заказчика, за исключением производителей, привлечённых к выполнению заказа.</li>
+                    <li>Производители получают документацию только в объёме, необходимом для оценки и выполнения заказа.</li>
+                    <li>Персональные данные обрабатываются в соответствии с ФЗ-152 «О персональных данных».</li>
+                    <li>Соглашение действует бессрочно в отношении переданной документации.</li>
+                  </ul>
+                  <p className="mt-2">
+                    <a href="/nda" target="_blank" className="text-primary underline">Полный текст соглашения →</a>
+                  </p>
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={ndaAccepted}
+                  onChange={(e) => setNdaAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4"
+                />
+                <span className="text-sm">
+                  Я принимаю условия <strong>соглашения о конфиденциальности</strong> и даю согласие
+                  на обработку персональных данных
+                </span>
+              </label>
+            </section>
+
+            {!ndaAccepted && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 text-center">
+                Для продолжения необходимо принять соглашение о конфиденциальности
+              </div>
+            )}
 
             {/* ══════ 1. Контактная информация ══════ */}
             <section className={sectionCls}>
@@ -482,8 +535,44 @@ export default function ZayavkaPage() {
             {/* ══════ 3. Коммерческие условия ══════ */}
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Коммерческие условия</h2>
-              <p className={sectionDescCls}>Бюджет и сроки — заполните что знаете, остальное обсудим</p>
-              <div className="space-y-4">
+              <p className={sectionDescCls}>Что для вас важнее и каков бюджет</p>
+              <div className="space-y-5">
+
+                {/* Order strategy */}
+                <div>
+                  <label className={labelCls + " mb-2"}>Приоритет заказа</label>
+                  <div className="space-y-2">
+                    {[
+                      { id: "best_price", label: "Лучшее предложение по цене", desc: "Ищем оптимальное соотношение цена/качество, сроки гибкие" },
+                      { id: "best_time", label: "Лучшее предложение по срокам", desc: "Приоритет — скорость, готовы рассмотреть более высокую цену" },
+                      { id: "blitz", label: "Блиц-цена (проходная)", desc: "Быстрый запуск — первый поставщик, который подтвердит условия" },
+                    ].map((opt) => (
+                      <label
+                        key={opt.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                          orderStrategy === opt.id
+                            ? "border-primary bg-blue-50"
+                            : "border-border hover:border-muted"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="orderStrategy"
+                          value={opt.id}
+                          checked={orderStrategy === opt.id}
+                          onChange={(e) => setOrderStrategy(e.target.value)}
+                          className="mt-1"
+                        />
+                        <div>
+                          <span className="text-sm font-medium">{opt.label}</span>
+                          <p className="text-xs text-muted mt-0.5">{opt.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Budget */}
                 <div>
                   <label className={labelCls}>Бюджет</label>
                   <div className="mt-1 flex gap-2">
@@ -492,20 +581,35 @@ export default function ZayavkaPage() {
                       min="0"
                       value={budgetMax}
                       onChange={(e) => setBudgetMax(e.target.value)}
-                      placeholder="Сумма, ₽"
+                      placeholder={isChinaDelivery ? "Сумма" : "Сумма, ₽"}
                       className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
                     />
+                    {isChinaDelivery ? (
+                      <select
+                        value={budgetCurrency}
+                        onChange={(e) => setBudgetCurrency(e.target.value)}
+                        className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                      >
+                        <option value="RUB">₽ RUB</option>
+                        <option value="USD">$ USD</option>
+                        <option value="CNY">¥ CNY</option>
+                        <option value="EUR">€ EUR</option>
+                      </select>
+                    ) : (
+                      <span className="flex items-center px-3 text-sm text-muted">₽</span>
+                    )}
                     <select
                       value={budgetType}
                       onChange={(e) => setBudgetType(e.target.value as "per_unit" | "per_batch")}
                       className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
                     >
-                      <option value="per_batch">за всю партию</option>
+                      <option value="per_batch">за партию</option>
                       <option value="per_unit">за единицу</option>
                     </select>
                   </div>
                 </div>
 
+                {/* Deadline */}
                 <div>
                   <label className={labelCls}>Желаемый срок поставки</label>
                   <input
@@ -516,6 +620,63 @@ export default function ZayavkaPage() {
                     style={{ maxWidth: 250 }}
                   />
                 </div>
+
+                {/* Pilot batch */}
+                <div>
+                  <label className={labelCls + " mb-2"}>Пилотная партия (образцы)</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { id: "yes" as const, label: "Да, нужна" },
+                      { id: "no" as const, label: "Нет, сразу серия" },
+                      { id: "undecided" as const, label: "Обсудим" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setNeedPilot(opt.id)}
+                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          needPilot === opt.id
+                            ? "border-primary bg-blue-50 text-primary"
+                            : "border-border text-foreground hover:border-muted"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-muted">
+                    Пилотная партия — проверка качества на небольшом объёме перед запуском серийного производства
+                  </p>
+                </div>
+
+                {/* Incoterms — only for China delivery */}
+                {isChinaDelivery && (
+                  <div>
+                    <label className={labelCls + " mb-2"}>Условия поставки (Incoterms)</label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        { id: "EXW", label: "EXW", desc: "Самовывоз с завода" },
+                        { id: "FOB", label: "FOB", desc: "До порта отгрузки" },
+                        { id: "CIF", label: "CIF", desc: "До порта назначения" },
+                        { id: "none", label: "Не знаю", desc: "" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setIncoterms(opt.id)}
+                          className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                            incoterms === opt.id
+                              ? "border-primary bg-blue-50 text-primary"
+                              : "border-border text-foreground hover:border-muted"
+                          }`}
+                        >
+                          <span className="font-medium">{opt.label}</span>
+                          {opt.desc && <span className="ml-1 text-xs text-muted">— {opt.desc}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -721,7 +882,12 @@ export default function ZayavkaPage() {
 
             {/* ══════ Submit ══════ */}
             <div className="pb-8">
-              {!emailVerified && (
+              {!ndaAccepted && (
+                <p className="mb-3 text-sm text-amber-600">
+                  Необходимо принять соглашение о конфиденциальности
+                </p>
+              )}
+              {ndaAccepted && !emailVerified && (
                 <p className="mb-3 text-sm text-amber-600">
                   Для отправки заявки необходимо подтвердить email
                 </p>
@@ -734,7 +900,7 @@ export default function ZayavkaPage() {
                 {submitting ? "Отправка..." : "Отправить заявку"}
               </button>
               <p className="mt-3 text-center text-xs text-muted">
-                Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
+                Оплата — 100% предоплата. Детали обсудим после рассмотрения заявки.
               </p>
             </div>
           </div>
