@@ -5,10 +5,10 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const DELIVERY_OPTIONS = [
-  { id: "warehouse_china", label: "Со склада EveryPart в Китае (самовывоз / своя логистика)" },
-  { id: "warehouse_moscow", label: "Со склада в Москве" },
-  { id: "door_delivery", label: "Доставка до двери (включая растаможку)" },
-  { id: "undecided", label: "Пока не определился — нужна консультация" },
+  { id: "warehouse_china", label: "Со склада в Китае" },
+  { id: "warehouse_russia", label: "Со склада в РФ (самовывоз)" },
+  { id: "transport_company", label: "Доставка транспортной компанией" },
+  { id: "undecided", label: "Решу позже" },
 ];
 
 const ENTITY_TYPES = [
@@ -19,11 +19,12 @@ const ENTITY_TYPES = [
 
 const API_URL = process.env.NEXT_PUBLIC_EVERYPART_API || "https://app.everypart.tech";
 
-// --- Reusable field styles ---
+// --- Reusable styles ---
 const inputCls = "mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary";
 const labelCls = "block text-sm font-medium text-foreground";
 const sectionCls = "rounded-2xl border border-border bg-white p-6";
-const sectionTitleCls = "text-lg font-semibold text-foreground mb-4";
+const sectionTitleCls = "text-lg font-semibold text-foreground";
+const sectionDescCls = "mt-1 text-sm text-muted mb-4";
 
 export default function ZayavkaPage() {
   const [submitting, setSubmitting] = useState(false);
@@ -42,41 +43,43 @@ export default function ZayavkaPage() {
   const [city, setCity] = useState("");
   const [entityType, setEntityType] = useState("company");
   const [companyName, setCompanyName] = useState("");
+  const [inn, setInn] = useState("");
 
-  // Project
+  // Order
   const [title, setTitle] = useState("");
+  const [freeText, setFreeText] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [deadline, setDeadline] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+
+  // Commercial
   const [budgetMax, setBudgetMax] = useState("");
   const [budgetType, setBudgetType] = useState<"per_unit" | "per_batch">("per_batch");
-  const [deliveryOption, setDeliveryOption] = useState("undecided");
+  const [deadline, setDeadline] = useState("");
 
-  // Description
-  const [freeText, setFreeText] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  // QC
+  // placeholder — will be expanded later
+
+  // Delivery
+  const [deliveryOption, setDeliveryOption] = useState("undecided");
 
   const canSubmit = fullName.trim() && email.trim() && emailVerified && title.trim();
 
-  // --- Email verification (client-side code) ---
+  // --- Email verification ---
   const sendEmailCode = () => {
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setEmailVerifyError("Введите корректный email");
       return;
     }
-    // Generate a 6-digit code and store it locally
     const code = String(Math.floor(100000 + Math.random() * 900000));
     setEmailCode(code);
     setEmailCodeSent(true);
     setEmailVerifyError("");
 
-    // Send code via API
     fetch(`${API_URL}/api/public/send-verification-code`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code }),
-    }).catch(() => {
-      // If API not available yet, just allow code-based verification
-    });
+    }).catch(() => {});
   };
 
   const verifyEmailCode = () => {
@@ -103,6 +106,7 @@ export default function ZayavkaPage() {
           city,
           entityType,
           companyName: entityType !== "individual" ? companyName : undefined,
+          inn: inn || undefined,
           title,
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
@@ -189,9 +193,10 @@ export default function ZayavkaPage() {
 
           <div className="mt-8 space-y-6">
 
-            {/* === Section 1: Contact === */}
+            {/* ══════ 1. Контактная информация ══════ */}
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Контактная информация</h2>
+              <p className={sectionDescCls}>Как с вами связаться</p>
               <div className="space-y-4">
                 <div>
                   <label className={labelCls}>
@@ -287,13 +292,12 @@ export default function ZayavkaPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+7 (___) ___-__-__"
-                      className={`flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary`}
+                      className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
                     />
                     {phone.trim().length >= 11 && (
                       <button
                         type="button"
                         onClick={() => {
-                          // TODO: SMS verification — will be implemented when SMS service is configured
                           alert("Подтверждение по SMS будет доступно в ближайшее время");
                         }}
                         className="whitespace-nowrap rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-primary hover:text-primary"
@@ -352,12 +356,31 @@ export default function ZayavkaPage() {
                     />
                   </div>
                 )}
+
+                {/* INN — optional, for company/sole_proprietor */}
+                {entityType !== "individual" && (
+                  <div>
+                    <label className={labelCls}>ИНН</label>
+                    <input
+                      type="text"
+                      value={inn}
+                      onChange={(e) => setInn(e.target.value.replace(/\D/g, ""))}
+                      placeholder={entityType === "sole_proprietor" ? "12 цифр" : "10 цифр"}
+                      maxLength={entityType === "sole_proprietor" ? 12 : 10}
+                      className={inputCls}
+                    />
+                    <p className="mt-1 text-xs text-muted">
+                      Необязательно. В будущем — автозаполнение реквизитов по ИНН.
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
 
-            {/* === Section 2: Project === */}
+            {/* ══════ 2. Информация о заказе ══════ */}
             <section className={sectionCls}>
-              <h2 className={sectionTitleCls}>Информация о проекте</h2>
+              <h2 className={sectionTitleCls}>Информация о заказе</h2>
+              <p className={sectionDescCls}>Что нужно изготовить</p>
               <div className="space-y-4">
                 <div>
                   <label className={labelCls}>
@@ -373,7 +396,7 @@ export default function ZayavkaPage() {
                 </div>
 
                 <div>
-                  <label className={labelCls}>Опишите ваш проект</label>
+                  <label className={labelCls}>Описание</label>
                   <textarea
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
@@ -383,29 +406,70 @@ export default function ZayavkaPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={labelCls}>Количество</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      placeholder="шт"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Желаемый срок поставки</label>
-                    <input
-                      type="date"
-                      value={deadline}
-                      onChange={(e) => setDeadline(e.target.value)}
-                      className={inputCls}
-                    />
-                  </div>
+                <div>
+                  <label className={labelCls}>Количество</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="шт"
+                    className={inputCls}
+                    style={{ maxWidth: 200 }}
+                  />
                 </div>
 
+                {/* Documentation */}
+                <div>
+                  <label className={labelCls}>Документация</label>
+                  <p className="mt-1 mb-2 text-xs text-muted">
+                    Чертежи, 3D-модели, ТЗ, фотографии — всё, что поможет оценить заказ
+                  </p>
+                  <div className="rounded-lg border-2 border-dashed border-border p-5 text-center transition-colors hover:border-primary">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.zip,.rar,.doc,.docx,.xls,.xlsx"
+                      onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <svg className="mx-auto h-8 w-8 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="mt-1 text-sm text-muted">
+                        Нажмите для выбора файлов или перетащите сюда
+                      </p>
+                      <p className="mt-1 text-xs text-muted">
+                        PDF, STEP, STL, DWG, DXF, PNG, JPG, DOC, XLS, ZIP (до 25 МБ)
+                      </p>
+                    </label>
+                  </div>
+                  {files.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {files.map((f, i) => (
+                        <li key={i} className="flex items-center gap-2 text-sm text-muted">
+                          <svg className="h-4 w-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                          </svg>
+                          {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-2 text-xs text-muted">
+                    Загрузка файлов будет доступна в следующей версии. Пока приложите их к письму после отправки заявки.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* ══════ 3. Коммерческие условия ══════ */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Коммерческие условия</h2>
+              <p className={sectionDescCls}>Бюджет и сроки — заполните что знаете, остальное обсудим</p>
+              <div className="space-y-4">
                 <div>
                   <label className={labelCls}>Бюджет</label>
                   <div className="mt-1 flex gap-2">
@@ -427,17 +491,41 @@ export default function ZayavkaPage() {
                     </select>
                   </div>
                 </div>
+
+                <div>
+                  <label className={labelCls}>Желаемый срок поставки</label>
+                  <input
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                    className={inputCls}
+                    style={{ maxWidth: 250 }}
+                  />
+                </div>
               </div>
             </section>
 
-            {/* === Section 3: Delivery === */}
+            {/* ══════ 4. Приёмка и контроль качества ══════ */}
             <section className={sectionCls}>
-              <h2 className={sectionTitleCls}>Приёмка и доставка</h2>
+              <h2 className={sectionTitleCls}>Приёмка партии и контроль качества</h2>
+              <p className={sectionDescCls}>Требования к проверке качества — раздел в разработке</p>
+              <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted">
+                Здесь будет выбор методов контроля качества: визуальный осмотр, измерение размеров, CMM,
+                испытания на прочность, сертификация материалов и другие опции.
+                <br /><br />
+                Если у вас есть особые требования к контролю качества, укажите их в описании заказа выше.
+              </div>
+            </section>
+
+            {/* ══════ 5. Доставка ══════ */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Доставка</h2>
+              <p className={sectionDescCls}>Как вы хотите получить заказ</p>
               <div className="space-y-2">
                 {DELIVERY_OPTIONS.map((opt) => (
                   <label
                     key={opt.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                       deliveryOption === opt.id
                         ? "border-primary bg-blue-50"
                         : "border-border hover:border-muted"
@@ -449,7 +537,6 @@ export default function ZayavkaPage() {
                       value={opt.id}
                       checked={deliveryOption === opt.id}
                       onChange={(e) => setDeliveryOption(e.target.value)}
-                      className="mt-0.5"
                     />
                     <span className="text-sm">{opt.label}</span>
                   </label>
@@ -457,48 +544,7 @@ export default function ZayavkaPage() {
               </div>
             </section>
 
-            {/* === Section 4: Files === */}
-            <section className={sectionCls}>
-              <h2 className={sectionTitleCls}>Файлы</h2>
-              <div className="rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary">
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.zip,.rar"
-                  onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <svg className="mx-auto h-10 w-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  <p className="mt-2 text-sm text-muted">
-                    Чертежи, 3D-модели, фото — нажмите или перетащите
-                  </p>
-                  <p className="mt-1 text-xs text-muted">
-                    PDF, STEP, STL, DWG, DXF, PNG, JPG (до 25 МБ)
-                  </p>
-                </label>
-              </div>
-              {files.length > 0 && (
-                <ul className="mt-3 space-y-1">
-                  {files.map((f, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-muted">
-                      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                      {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="mt-2 text-xs text-muted">
-                Загрузка файлов будет доступна в следующей версии. Пока приложите их к письму после отправки заявки.
-              </p>
-            </section>
-
-            {/* === Submit === */}
+            {/* ══════ Submit ══════ */}
             <div className="pb-8">
               {!emailVerified && (
                 <p className="mb-3 text-sm text-amber-600">
