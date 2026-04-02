@@ -260,6 +260,8 @@ export default function ZayavkaPage() {
               </div>
             )}
 
+            {ndaAccepted && (<>
+
             {/* ══════ 1. Контактная информация ══════ */}
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Контактная информация</h2>
@@ -882,12 +884,7 @@ export default function ZayavkaPage() {
 
             {/* ══════ Submit ══════ */}
             <div className="pb-8">
-              {!ndaAccepted && (
-                <p className="mb-3 text-sm text-amber-600">
-                  Необходимо принять соглашение о конфиденциальности
-                </p>
-              )}
-              {ndaAccepted && !emailVerified && (
+              {!emailVerified && (
                 <p className="mb-3 text-sm text-amber-600">
                   Для отправки заявки необходимо подтвердить email
                 </p>
@@ -903,6 +900,8 @@ export default function ZayavkaPage() {
                 Оплата — 100% предоплата. Детали обсудим после рассмотрения заявки.
               </p>
             </div>
+
+            </>)}
           </div>
         </div>
       </main>
