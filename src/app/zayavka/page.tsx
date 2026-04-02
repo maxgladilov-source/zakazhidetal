@@ -264,7 +264,7 @@ export default function ZayavkaPage() {
           <p className="mt-2 text-muted">
             Опишите вашу задачу — мы подберём оптимальное решение и свяжемся с вами.
             Эта форма — для заявки на изготовление партии деталей одного типа.
-            Если в вашем заказе несколько позиций — <a href="https://app.everypart.tech/register" className="underline hover:text-foreground">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа.
+            Если в вашем заказе несколько позиций — <a href="/register" className="underline hover:text-foreground">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа.
           </p>
 
           {error && (
