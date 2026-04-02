@@ -18,7 +18,7 @@ type Step = 1 | 2 | 3;
 export default function ZayavkaPage() {
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ orderNumber: string; redirectUrl: string } | null>(null);
+  const [result, setResult] = useState<{ inquiryNumber: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Step 1 — contact
@@ -46,7 +46,7 @@ export default function ZayavkaPage() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/public/submit-order`, {
+      const res = await fetch(`${API_URL}/api/public/submit-inquiry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -57,13 +57,11 @@ export default function ZayavkaPage() {
           title,
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
+          budgetType,
           budgetCurrency: "RUB",
+          deliveryOption: deliveryOption !== "undecided" ? deliveryOption : undefined,
           deadlineDesired: deadline || undefined,
-          freeText: [
-            freeText,
-            budgetType === "per_unit" && budgetMax ? `[Бюджет за единицу: ${budgetMax} ₽]` : "",
-            deliveryOption !== "undecided" ? `[Доставка: ${DELIVERY_OPTIONS.find(d => d.id === deliveryOption)?.label}]` : "",
-          ].filter(Boolean).join("\n"),
+          freeText: freeText || undefined,
         }),
       });
 
@@ -83,6 +81,7 @@ export default function ZayavkaPage() {
 
   // Success screen
   if (result) {
+    const registerUrl = `${API_URL.replace("app.", "app.")}/register`;
     return (
       <>
         <Header />
@@ -94,19 +93,24 @@ export default function ZayavkaPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-green-800">Заявка отправлена!</h2>
+              <h2 className="text-2xl font-bold text-green-800">Заявка принята!</h2>
               <p className="mt-2 text-green-700">
-                Номер заказа: <strong>{result.orderNumber}</strong>
+                Номер заявки: <strong>{result.inquiryNumber}</strong>
               </p>
               <p className="mt-4 text-sm text-green-600">
-                На ваш email отправлены данные для входа в личный кабинет,
-                где вы сможете отслеживать статус заказа.
+                Мы получили вашу информацию и свяжемся с вами в ближайшее время.
               </p>
+              <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
+                <p className="text-sm font-semibold text-blue-800">Хотите отслеживать статус заявки?</p>
+                <p className="mt-1 text-sm text-blue-700">
+                  Зарегистрируйтесь в личном кабинете, подтвердите email и настройте уведомления.
+                </p>
+              </div>
               <a
-                href={result.redirectUrl}
+                href={registerUrl}
                 className="mt-6 inline-block rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
               >
-                Перейти в личный кабинет
+                Зарегистрироваться
               </a>
             </div>
           </div>
