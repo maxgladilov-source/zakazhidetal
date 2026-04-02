@@ -273,6 +273,11 @@ export default function ZayavkaPage() {
             </div>
           )}
 
+          <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+            Эта форма — для заявки на изготовление партии деталей <strong>одного типа</strong>.
+            Если в вашем заказе несколько позиций — <a href="https://app.everypart.tech/register" className="underline font-medium">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа с несколькими позициями.
+          </div>
+
           <div className="mt-8 space-y-6">
 
             {/* ══════ 1. Контактная информация ══════ */}
@@ -574,10 +579,6 @@ export default function ZayavkaPage() {
                   </p>
                 </div>
 
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
-                  Эта форма — для заявки на <strong>одну деталь</strong>.
-                  Если в вашем заказе несколько деталей — <a href="https://app.everypart.tech/register" className="underline font-medium">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа с несколькими позициями.
-                </div>
               </div>
             </section>
 
@@ -585,6 +586,9 @@ export default function ZayavkaPage() {
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Коммерческие условия</h2>
               <p className={sectionDescCls}>Что для вас важнее и каков бюджет</p>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 mb-5">
+                Условия оплаты — <strong>100% предоплата</strong>. Детали обсудим после рассмотрения заявки.
+              </div>
               <div className="space-y-5">
 
                 {/* Order strategy */}
@@ -986,9 +990,6 @@ export default function ZayavkaPage() {
               >
                 {submitting ? "Отправка..." : "Отправить заявку"}
               </button>
-              <p className="mt-3 text-center text-xs text-muted">
-                Оплата — 100% предоплата. Детали обсудим после рассмотрения заявки.
-              </p>
             </div>
           </div>
         </div>
