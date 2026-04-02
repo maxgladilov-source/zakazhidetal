@@ -493,9 +493,13 @@ export default function ZayavkaPage() {
                   <input
                     type="number"
                     min="1"
+                    max="1000000"
                     value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="шт"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "" || (Number(v) >= 0 && Number(v) <= 1000000)) setQuantity(v);
+                    }}
+                    placeholder="шт (макс. 1 000 000)"
                     className={inputCls}
                     style={{ maxWidth: 200 }}
                   />
