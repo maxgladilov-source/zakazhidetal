@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 const DELIVERY_OPTIONS = [
   { id: "warehouse_china", label: "Со склада в Китае" },
@@ -74,6 +76,27 @@ export default function ZayavkaPage() {
 
   // Delivery
   const [deliveryOption, setDeliveryOption] = useState("undecided");
+
+  // Session timeout (ФЗ-152: clear buffer after 10 min inactivity)
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetSessionTimer = useCallback(() => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setSessionExpired(true);
+    }, SESSION_TIMEOUT_MS);
+  }, []);
+
+  useEffect(() => {
+    resetSessionTimer();
+    const events = ["mousemove", "keydown", "scroll", "touchstart", "click"] as const;
+    events.forEach((e) => window.addEventListener(e, resetSessionTimer));
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      events.forEach((e) => window.removeEventListener(e, resetSessionTimer));
+    };
+  }, [resetSessionTimer]);
 
   const isChinaDelivery = deliveryOption === "warehouse_china";
   const canSubmit = ndaAccepted && fullName.trim() && email.trim() && emailVerified && title.trim();
@@ -158,6 +181,40 @@ export default function ZayavkaPage() {
     }
   };
 
+  // --- Session expired screen ---
+  if (sessionExpired) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen pt-24 pb-16">
+          <div className="mx-auto max-w-xl px-6">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-amber-800">Время сессии истекло</h2>
+              <p className="mt-2 text-amber-700">
+                В целях защиты ваших персональных данных (ФЗ-152) сессия была завершена после 10 минут неактивности.
+              </p>
+              <p className="mt-2 text-sm text-amber-600">
+                Все введённые данные удалены из буфера. Пожалуйста, заполните форму заново.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-6 inline-block rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
+              >
+                Начать новую заявку
+              </button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   // --- Success screen ---
   if (result) {
     const registerUrl = `${API_URL}/register`;
@@ -217,50 +274,6 @@ export default function ZayavkaPage() {
           )}
 
           <div className="mt-8 space-y-6">
-
-            {/* ══════ 0. NDA / Оферта ══════ */}
-            <section className={`${sectionCls} ${ndaAccepted ? "border-green-200 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}`}>
-              <h2 className={sectionTitleCls}>Соглашение о конфиденциальности</h2>
-              <div className="text-sm text-foreground space-y-2 mb-4">
-                <p>
-                  Перед отправкой персональных данных и технической документации необходимо
-                  принять условия соглашения о конфиденциальности (NDA).
-                </p>
-                <div className="rounded-lg border border-border bg-white p-4 text-xs text-muted max-h-40 overflow-y-auto">
-                  <p className="font-semibold text-foreground mb-2">Основные положения:</p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    <li>Вся предоставленная техническая документация (чертежи, 3D-модели, спецификации) является конфиденциальной информацией Заказчика.</li>
-                    <li>EveryPart обязуется не передавать документацию третьим лицам без письменного согласия Заказчика, за исключением производителей, привлечённых к выполнению заказа.</li>
-                    <li>Производители получают документацию только в объёме, необходимом для оценки и выполнения заказа.</li>
-                    <li>Персональные данные обрабатываются в соответствии с ФЗ-152 «О персональных данных».</li>
-                    <li>Соглашение действует бессрочно в отношении переданной документации.</li>
-                  </ul>
-                  <p className="mt-2">
-                    <a href="/nda" target="_blank" className="text-primary underline">Полный текст соглашения →</a>
-                  </p>
-                </div>
-              </div>
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={ndaAccepted}
-                  onChange={(e) => setNdaAccepted(e.target.checked)}
-                  className="mt-1 h-4 w-4"
-                />
-                <span className="text-sm">
-                  Я принимаю условия <strong>соглашения о конфиденциальности</strong> и даю согласие
-                  на обработку персональных данных
-                </span>
-              </label>
-            </section>
-
-            {!ndaAccepted && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 text-center">
-                Для продолжения необходимо принять соглашение о конфиденциальности
-              </div>
-            )}
-
-            {ndaAccepted && (<>
 
             {/* ══════ 1. Контактная информация ══════ */}
             <section className={sectionCls}>
@@ -448,18 +461,18 @@ export default function ZayavkaPage() {
 
             {/* ══════ 2. Информация о заказе ══════ */}
             <section className={sectionCls}>
-              <h2 className={sectionTitleCls}>Информация о заказе</h2>
-              <p className={sectionDescCls}>Что нужно изготовить</p>
+              <h2 className={sectionTitleCls}>Информация о детали</h2>
+              <p className={sectionDescCls}>Одна заявка — одна деталь. Укажите что нужно изготовить.</p>
               <div className="space-y-4">
                 <div>
                   <label className={labelCls}>
-                    Название заказа <span className="text-red-500">*</span>
+                    Название детали <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Например: Корпус датчика из алюминия, 500 шт"
+                    placeholder="Например: Корпус датчика из алюминия 6061-T6"
                     className={inputCls}
                   />
                 </div>
@@ -490,16 +503,36 @@ export default function ZayavkaPage() {
 
                 {/* Documentation */}
                 <div>
-                  <label className={labelCls}>Документация</label>
+                  <label className={labelCls}>Документация на деталь</label>
                   <p className="mt-1 mb-2 text-xs text-muted">
-                    Чертежи, 3D-модели, ТЗ, фотографии — всё, что поможет оценить заказ
+                    Чертёж, 3D-модель, спецификация — на одну деталь
                   </p>
                   <div className="rounded-lg border-2 border-dashed border-border p-5 text-center transition-colors hover:border-primary">
                     <input
                       type="file"
                       multiple
-                      accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.zip,.rar,.doc,.docx,.xls,.xlsx"
-                      onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                      accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.files || []);
+                        const ALLOWED_EXT = [".pdf",".step",".stp",".iges",".igs",".stl",".dwg",".dxf",".png",".jpg",".jpeg",".doc",".docx",".xls",".xlsx"];
+                        const MAX_SIZE = 25 * 1024 * 1024;
+                        const valid: File[] = [];
+                        const rejected: string[] = [];
+                        for (const f of selected) {
+                          const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+                          if (!ALLOWED_EXT.includes(ext)) {
+                            rejected.push(`${f.name} — недопустимый формат`);
+                          } else if (f.size > MAX_SIZE) {
+                            rejected.push(`${f.name} — превышает 25 МБ`);
+                          } else {
+                            valid.push(f);
+                          }
+                        }
+                        setFiles(valid);
+                        if (rejected.length) {
+                          setError(`Отклонённые файлы: ${rejected.join("; ")}`);
+                        }
+                      }}
                       className="hidden"
                       id="file-upload"
                     />
@@ -511,25 +544,39 @@ export default function ZayavkaPage() {
                         Нажмите для выбора файлов или перетащите сюда
                       </p>
                       <p className="mt-1 text-xs text-muted">
-                        PDF, STEP, STL, DWG, DXF, PNG, JPG, DOC, XLS, ZIP (до 25 МБ)
+                        PDF, STEP, STL, DWG, DXF, IGES, PNG, JPG, DOC, XLS (до 25 МБ за файл)
                       </p>
                     </label>
                   </div>
                   {files.length > 0 && (
                     <ul className="mt-3 space-y-1">
                       {files.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-muted">
-                          <svg className="h-4 w-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
+                        <li key={i} className="flex items-center justify-between text-sm text-muted">
+                          <span className="flex items-center gap-2">
+                            <svg className="h-4 w-4 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setFiles(files.filter((_, fi) => fi !== i))}
+                            className="text-xs text-red-400 hover:text-red-600"
+                          >
+                            Удалить
+                          </button>
                         </li>
                       ))}
                     </ul>
                   )}
                   <p className="mt-2 text-xs text-muted">
-                    Загрузка файлов будет доступна в следующей версии. Пока приложите их к письму после отправки заявки.
+                    Архивы (ZIP, RAR) не принимаются — загружайте файлы по отдельности.
                   </p>
+                </div>
+
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+                  Эта форма — для заявки на <strong>одну деталь</strong>.
+                  Если в вашем заказе несколько деталей — <a href="https://app.everypart.tech/register" className="underline font-medium">зарегистрируйтесь в личном кабинете</a>, там доступен инструмент для формирования заказа с несколькими позициями.
                 </div>
               </div>
             </section>
@@ -882,11 +929,54 @@ export default function ZayavkaPage() {
               </div>
             </section>
 
-            {/* ══════ Submit ══════ */}
+            {/* ══════ Согласие и отправка ══════ */}
+            <section className={`${sectionCls} ${ndaAccepted ? "border-green-200 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}`}>
+              <h2 className={sectionTitleCls}>Соглашение о конфиденциальности и обработке данных</h2>
+              <div className="text-sm text-foreground space-y-2 mb-4">
+                <p>
+                  Нажимая кнопку «Отправить заявку», вы соглашаетесь с условиями соглашения
+                  о конфиденциальности (NDA) и даёте согласие на обработку персональных данных
+                  в соответствии с Федеральным законом №152-ФЗ «О персональных данных».
+                </p>
+                <div className="rounded-lg border border-border bg-white p-4 text-xs text-muted max-h-40 overflow-y-auto">
+                  <p className="font-semibold text-foreground mb-2">Основные положения:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Вся предоставленная техническая документация (чертежи, 3D-модели, спецификации) является конфиденциальной информацией Заказчика.</li>
+                    <li>EveryPart обязуется не передавать документацию третьим лицам без письменного согласия Заказчика, за исключением производителей, привлечённых к выполнению заказа.</li>
+                    <li>Производители получают документацию только в объёме, необходимом для оценки и выполнения заказа.</li>
+                    <li>Персональные данные обрабатываются в соответствии с ФЗ-152 «О персональных данных».</li>
+                    <li>До момента отправки заявки никакие данные не передаются и не сохраняются на сервере.</li>
+                    <li>Сессия заполнения формы ограничена 10 минутами неактивности — по истечении все данные автоматически удаляются из буфера.</li>
+                    <li>Соглашение действует бессрочно в отношении переданной документации.</li>
+                  </ul>
+                  <p className="mt-2">
+                    <a href="/nda" target="_blank" className="text-primary underline">Полный текст соглашения →</a>
+                  </p>
+                </div>
+              </div>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={ndaAccepted}
+                  onChange={(e) => setNdaAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4"
+                />
+                <span className="text-sm">
+                  Я принимаю условия <strong>соглашения о конфиденциальности</strong> и даю согласие
+                  на обработку персональных данных в соответствии с ФЗ-152
+                </span>
+              </label>
+            </section>
+
             <div className="pb-8">
               {!emailVerified && (
                 <p className="mb-3 text-sm text-amber-600">
                   Для отправки заявки необходимо подтвердить email
+                </p>
+              )}
+              {!ndaAccepted && (
+                <p className="mb-3 text-sm text-amber-600">
+                  Для отправки необходимо принять соглашение о конфиденциальности и обработке данных
                 </p>
               )}
               <button
@@ -900,8 +990,6 @@ export default function ZayavkaPage() {
                 Оплата — 100% предоплата. Детали обсудим после рассмотрения заявки.
               </p>
             </div>
-
-            </>)}
           </div>
         </div>
       </main>
