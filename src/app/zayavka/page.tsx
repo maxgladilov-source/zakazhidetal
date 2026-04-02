@@ -57,7 +57,13 @@ export default function ZayavkaPage() {
   const [deadline, setDeadline] = useState("");
 
   // QC
-  // placeholder — will be expanded later
+  const [qcType, setQcType] = useState("supplier");
+  const [qcScope, setQcScope] = useState("sampling");
+  const [qcAdvanced, setQcAdvanced] = useState(false);
+  const [qcThirdParty, setQcThirdParty] = useState(false);
+  const [qcFai, setQcFai] = useState(false);
+  const [qcInProcess, setQcInProcess] = useState(false);
+  const [qcAqlLevel, setQcAqlLevel] = useState("normal");
 
   // Delivery
   const [deliveryOption, setDeliveryOption] = useState("undecided");
@@ -115,6 +121,14 @@ export default function ZayavkaPage() {
           deliveryOption: deliveryOption !== "undecided" ? deliveryOption : undefined,
           deadlineDesired: deadline || undefined,
           freeText: freeText || undefined,
+          qc: {
+            type: qcType,
+            scope: qcScope,
+            thirdParty: qcThirdParty,
+            fai: qcFai,
+            inProcess: qcInProcess,
+            aqlLevel: qcScope === "sampling" ? qcAqlLevel : undefined,
+          },
         }),
       });
 
@@ -508,12 +522,172 @@ export default function ZayavkaPage() {
             {/* ══════ 4. Приёмка и контроль качества ══════ */}
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Приёмка партии и контроль качества</h2>
-              <p className={sectionDescCls}>Требования к проверке качества — раздел в разработке</p>
-              <div className="rounded-lg border border-border bg-surface p-4 text-sm text-muted">
-                Здесь будет выбор методов контроля качества: визуальный осмотр, измерение размеров, CMM,
-                испытания на прочность, сертификация материалов и другие опции.
-                <br /><br />
-                Если у вас есть особые требования к контролю качества, укажите их в описании заказа выше.
+              <p className={sectionDescCls}>Кто и как проверяет качество вашего заказа</p>
+
+              {/* QC Type — кто проверяет */}
+              <div className="mb-5">
+                <label className={labelCls + " mb-2"}>Кто проверяет</label>
+                <div className="space-y-2">
+                  {[
+                    { id: "supplier", label: "Контроль поставщика", desc: "Завод проверяет качество по своим стандартам" },
+                    { id: "everypart", label: "Проверка EveryPart", desc: "Наши специалисты дополнительно проверят партию перед отгрузкой" },
+                    { id: "customer_rep", label: "Приёмка вашим представителем", desc: "Ваш представитель в Китае лично примет партию на заводе" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        qcType === opt.id
+                          ? "border-primary bg-blue-50"
+                          : "border-border hover:border-muted"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="qcType"
+                        value={opt.id}
+                        checked={qcType === opt.id}
+                        onChange={(e) => setQcType(e.target.value)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">{opt.label}</span>
+                        <p className="text-xs text-muted mt-0.5">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* QC Scope — объём проверки */}
+              <div className="mb-4">
+                <label className={labelCls + " mb-2"}>Объём проверки</label>
+                <div className="space-y-2">
+                  {[
+                    { id: "sampling", label: "Выборочная проверка", desc: "Проверяется часть партии — стандартный подход для серийного производства" },
+                    { id: "full", label: "Сплошной контроль (100%)", desc: "Проверяется каждая деталь — для ответственных изделий" },
+                    { id: "combined", label: "Комбинированный", desc: "100% проверка ключевых параметров, выборочная по остальным" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                        qcScope === opt.id
+                          ? "border-primary bg-blue-50"
+                          : "border-border hover:border-muted"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="qcScope"
+                        value={opt.id}
+                        checked={qcScope === opt.id}
+                        onChange={(e) => setQcScope(e.target.value)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">{opt.label}</span>
+                        <p className="text-xs text-muted mt-0.5">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced — раскрывающийся блок */}
+              <div className="border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={() => setQcAdvanced(!qcAdvanced)}
+                  className="flex w-full items-center justify-between text-sm font-medium text-muted hover:text-foreground transition-colors"
+                >
+                  <span>Расширенные условия контроля</span>
+                  <svg
+                    className={`h-4 w-4 transition-transform ${qcAdvanced ? "rotate-180" : ""}`}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {qcAdvanced && (
+                  <div className="mt-4 space-y-4">
+                    {/* Third party */}
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      qcThirdParty ? "border-primary bg-blue-50" : "border-border hover:border-muted"
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={qcThirdParty}
+                        onChange={(e) => setQcThirdParty(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">Инспекция третьей стороной</span>
+                        <p className="text-xs text-muted mt-0.5">Независимая проверка (SGS, Bureau Veritas, TÜV и др.)</p>
+                      </div>
+                    </label>
+
+                    {/* FAI */}
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      qcFai ? "border-primary bg-blue-50" : "border-border hover:border-muted"
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={qcFai}
+                        onChange={(e) => setQcFai(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">Проверка первой детали (FAI)</span>
+                        <p className="text-xs text-muted mt-0.5">Утверждение образца перед запуском серии — помогает выявить проблемы до массового производства</p>
+                      </div>
+                    </label>
+
+                    {/* In-process */}
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      qcInProcess ? "border-primary bg-blue-50" : "border-border hover:border-muted"
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={qcInProcess}
+                        onChange={(e) => setQcInProcess(e.target.checked)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="text-sm font-medium">Промежуточный контроль</span>
+                        <p className="text-xs text-muted mt-0.5">Проверка в процессе производства — для крупных или длительных заказов</p>
+                      </div>
+                    </label>
+
+                    {/* AQL level — only if sampling selected */}
+                    {qcScope === "sampling" && (
+                      <div>
+                        <label className={labelCls}>Уровень приёмки (AQL)</label>
+                        <p className="mt-0.5 mb-2 text-xs text-muted">Стандарт ISO 2859-1 — допустимый уровень дефектов</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {[
+                            { id: "normal", label: "Нормальный", desc: "AQL 2.5%" },
+                            { id: "tightened", label: "Усиленный", desc: "AQL 1.0%" },
+                            { id: "reduced", label: "Облегчённый", desc: "AQL 4.0%" },
+                          ].map((lvl) => (
+                            <button
+                              key={lvl.id}
+                              type="button"
+                              onClick={() => setQcAqlLevel(lvl.id)}
+                              className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                qcAqlLevel === lvl.id
+                                  ? "border-primary bg-blue-50 text-primary"
+                                  : "border-border text-foreground hover:border-muted"
+                              }`}
+                            >
+                              <span className="font-medium">{lvl.label}</span>
+                              <span className="ml-1 text-xs text-muted">({lvl.desc})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </section>
 
