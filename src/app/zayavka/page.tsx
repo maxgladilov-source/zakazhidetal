@@ -97,7 +97,7 @@ export default function ZayavkaPage() {
     };
   }, [resetSessionTimer]);
 
-  const canSubmit = ndaAccepted && fullName.trim() && email.trim() && emailVerified && title.trim();
+  const canSubmit = ndaAccepted && fullName.trim() && email.trim() && emailVerified && phone.trim() && title.trim() && quantity && Number(quantity) > 0 && files.length > 0;
 
   // --- Email verification ---
   const sendEmailCode = () => {
@@ -367,7 +367,7 @@ export default function ZayavkaPage() {
 
                 {/* Phone */}
                 <div>
-                  <label className={labelCls}>Телефон</label>
+                  <label className={labelCls}>Телефон <span className="text-red-500">*</span></label>
                   <div className="mt-1 flex gap-2">
                     <input
                       type="tel"
@@ -489,7 +489,7 @@ export default function ZayavkaPage() {
                 </div>
 
                 <div>
-                  <label className={labelCls}>Количество</label>
+                  <label className={labelCls}>Количество <span className="text-red-500">*</span></label>
                   <input
                     type="number"
                     min="1"
@@ -507,7 +507,7 @@ export default function ZayavkaPage() {
 
                 {/* Documentation */}
                 <div>
-                  <label className={labelCls}>Документация на деталь</label>
+                  <label className={labelCls}>Документация на деталь <span className="text-red-500">*</span></label>
                   <p className="mt-1 mb-2 text-xs text-muted">
                     Чертёж, 3D-модель, спецификация — на одну деталь
                   </p>
@@ -933,15 +933,15 @@ export default function ZayavkaPage() {
             </section>
 
             <div className="pb-8">
-              {!emailVerified && (
-                <p className="mb-3 text-sm text-amber-600">
-                  Для отправки заявки необходимо подтвердить email
-                </p>
-              )}
-              {!ndaAccepted && (
-                <p className="mb-3 text-sm text-amber-600">
-                  Для отправки необходимо принять соглашение о конфиденциальности и обработке данных
-                </p>
+              {(!emailVerified || !phone.trim() || !title.trim() || !quantity || Number(quantity) <= 0 || files.length === 0 || !ndaAccepted) && (
+                <ul className="mb-3 text-sm text-amber-600 list-disc pl-5 space-y-1">
+                  {!emailVerified && <li>Подтвердите email</li>}
+                  {!phone.trim() && <li>Укажите телефон</li>}
+                  {!title.trim() && <li>Укажите название детали</li>}
+                  {(!quantity || Number(quantity) <= 0) && <li>Укажите количество</li>}
+                  {files.length === 0 && <li>Прикрепите документацию</li>}
+                  {!ndaAccepted && <li>Примите соглашение о конфиденциальности</li>}
+                </ul>
               )}
               <button
                 onClick={handleSubmit}
