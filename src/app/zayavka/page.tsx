@@ -11,23 +11,39 @@ const DELIVERY_OPTIONS = [
   { id: "undecided", label: "Пока не определился — нужна консультация" },
 ];
 
+const ENTITY_TYPES = [
+  { id: "individual", label: "Частное лицо" },
+  { id: "company", label: "Компания (ООО, АО)" },
+  { id: "sole_proprietor", label: "Индивидуальный предприниматель" },
+];
+
 const API_URL = process.env.NEXT_PUBLIC_EVERYPART_API || "https://app.everypart.tech";
 
-type Step = 1 | 2 | 3;
+// --- Reusable field styles ---
+const inputCls = "mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary";
+const labelCls = "block text-sm font-medium text-foreground";
+const sectionCls = "rounded-2xl border border-border bg-white p-6";
+const sectionTitleCls = "text-lg font-semibold text-foreground mb-4";
 
 export default function ZayavkaPage() {
-  const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ inquiryNumber: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Step 1 — contact
+  // Contact
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [emailCodeInput, setEmailCodeInput] = useState("");
+  const [emailVerifyError, setEmailVerifyError] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [entityType, setEntityType] = useState("company");
   const [companyName, setCompanyName] = useState("");
 
-  // Step 2 — parameters
+  // Project
   const [title, setTitle] = useState("");
   const [quantity, setQuantity] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -35,11 +51,42 @@ export default function ZayavkaPage() {
   const [budgetType, setBudgetType] = useState<"per_unit" | "per_batch">("per_batch");
   const [deliveryOption, setDeliveryOption] = useState("undecided");
 
-  // Step 3 — description
+  // Description
   const [freeText, setFreeText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
 
-  const canGoStep2 = fullName.trim() && email.trim() && title.trim();
+  const canSubmit = fullName.trim() && email.trim() && emailVerified && title.trim();
+
+  // --- Email verification (client-side code) ---
+  const sendEmailCode = () => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailVerifyError("Введите корректный email");
+      return;
+    }
+    // Generate a 6-digit code and store it locally
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setEmailCode(code);
+    setEmailCodeSent(true);
+    setEmailVerifyError("");
+
+    // Send code via API
+    fetch(`${API_URL}/api/public/send-verification-code`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code }),
+    }).catch(() => {
+      // If API not available yet, just allow code-based verification
+    });
+  };
+
+  const verifyEmailCode = () => {
+    if (emailCodeInput === emailCode) {
+      setEmailVerified(true);
+      setEmailVerifyError("");
+    } else {
+      setEmailVerifyError("Неверный код");
+    }
+  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -53,7 +100,9 @@ export default function ZayavkaPage() {
           fullName,
           email,
           phone,
-          companyName,
+          city,
+          entityType,
+          companyName: entityType !== "individual" ? companyName : undefined,
           title,
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
@@ -72,6 +121,7 @@ export default function ZayavkaPage() {
 
       const data = await res.json();
       setResult(data);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка при отправке заявки");
     } finally {
@@ -79,9 +129,9 @@ export default function ZayavkaPage() {
     }
   };
 
-  // Success screen
+  // --- Success screen ---
   if (result) {
-    const registerUrl = `${API_URL.replace("app.", "app.")}/register`;
+    const registerUrl = `${API_URL}/register`;
     return (
       <>
         <Header />
@@ -120,6 +170,7 @@ export default function ZayavkaPage() {
     );
   }
 
+  // --- Form ---
   return (
     <>
       <Header />
@@ -130,267 +181,342 @@ export default function ZayavkaPage() {
             Опишите вашу задачу — мы подберём оптимальное решение и свяжемся с вами.
           </p>
 
-          {/* Progress */}
-          <div className="mt-8 flex gap-2">
-            {[1, 2, 3].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  s <= step ? "bg-primary" : "bg-border"
-                }`}
-              />
-            ))}
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            Шаг {step} из 3:{" "}
-            {step === 1 && "Контакты и название"}
-            {step === 2 && "Параметры (необязательно)"}
-            {step === 3 && "Описание проекта"}
-          </p>
-
           {error && (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          {/* Step 1 — Contact + Title */}
-          {step === 1 && (
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  ФИО <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Иванов Иван Иванович"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ivanov@company.ru"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          <div className="mt-8 space-y-6">
+
+            {/* === Section 1: Contact === */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Контактная информация</h2>
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground">Телефон</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+7 (___) ___-__-__"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground">Компания</label>
+                  <label className={labelCls}>
+                    ФИО <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="ООО «Компания»"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Иванов Иван Иванович"
+                    className={inputCls}
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  Название заказа <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Например: Корпус датчика из алюминия, 500 шт"
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                />
-              </div>
 
-              <button
-                onClick={() => setStep(2)}
-                disabled={!canGoStep2}
-                className="mt-4 w-full rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Далее
-              </button>
-            </div>
-          )}
-
-          {/* Step 2 — Parameters */}
-          {step === 2 && (
-            <div className="mt-6 space-y-4">
-              <p className="text-sm text-muted">
-                Заполните что знаете — остальное уточним позже. Технологию и материалы определим вместе с вами после анализа документации.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
+                {/* Email with verification */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground">Количество</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    placeholder="шт"
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground">Желаемый срок поставки</label>
-                  <input
-                    type="date"
-                    value={deadline}
-                    onChange={(e) => setDeadline(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground">Бюджет</label>
-                <div className="mt-1 flex gap-2">
-                  <input
-                    type="number"
-                    min="0"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                    placeholder="Сумма, ₽"
-                    className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  />
-                  <select
-                    value={budgetType}
-                    onChange={(e) => setBudgetType(e.target.value as "per_unit" | "per_batch")}
-                    className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                  >
-                    <option value="per_batch">за всю партию</option>
-                    <option value="per_unit">за единицу</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-foreground">Приёмка и доставка</label>
-                <div className="mt-2 space-y-2">
-                  {DELIVERY_OPTIONS.map((opt) => (
-                    <label
-                      key={opt.id}
-                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                        deliveryOption === opt.id
-                          ? "border-primary bg-blue-50"
-                          : "border-border hover:border-muted"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="delivery"
-                        value={opt.id}
-                        checked={deliveryOption === opt.id}
-                        onChange={(e) => setDeliveryOption(e.target.value)}
-                        className="mt-0.5"
-                      />
-                      <span className="text-sm">{opt.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex-1 rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface"
-                >
-                  Назад
-                </button>
-                <button
-                  onClick={() => setStep(3)}
-                  className="flex-1 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark"
-                >
-                  Далее
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3 — Description */}
-          {step === 3 && (
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  Опишите ваш проект
-                </label>
-                <textarea
-                  value={freeText}
-                  onChange={(e) => setFreeText(e.target.value)}
-                  rows={5}
-                  placeholder="Расскажите подробности: что нужно изготовить, особые требования к качеству, допуски, покрытие, упаковка..."
-                  className="mt-1 w-full rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground">
-                  Файлы (чертежи, 3D-модели, фото)
-                </label>
-                <div className="mt-1 rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary">
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.zip,.rar"
-                    onChange={(e) => setFiles(Array.from(e.target.files || []))}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <svg className="mx-auto h-10 w-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    <p className="mt-2 text-sm text-muted">
-                      Нажмите для выбора файлов или перетащите сюда
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      PDF, STEP, STL, DWG, DXF, PNG, JPG (до 25 МБ)
-                    </p>
+                  <label className={labelCls}>
+                    Email <span className="text-red-500">*</span>
                   </label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setEmailVerified(false);
+                        setEmailCodeSent(false);
+                        setEmailVerifyError("");
+                      }}
+                      placeholder="ivanov@company.ru"
+                      className={`flex-1 rounded-lg border bg-white px-4 py-2.5 text-sm outline-none transition-colors ${
+                        emailVerified
+                          ? "border-green-400 bg-green-50"
+                          : "border-border focus:border-primary"
+                      }`}
+                      disabled={emailVerified}
+                    />
+                    {!emailVerified && !emailCodeSent && (
+                      <button
+                        type="button"
+                        onClick={sendEmailCode}
+                        className="whitespace-nowrap rounded-lg border border-primary px-4 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-blue-50"
+                      >
+                        Подтвердить
+                      </button>
+                    )}
+                    {emailVerified && (
+                      <span className="flex items-center gap-1 text-sm font-medium text-green-600">
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Подтверждён
+                      </span>
+                    )}
+                  </div>
+                  {emailCodeSent && !emailVerified && (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        type="text"
+                        value={emailCodeInput}
+                        onChange={(e) => setEmailCodeInput(e.target.value)}
+                        placeholder="Введите 6-значный код"
+                        maxLength={6}
+                        className="w-48 rounded-lg border border-border bg-white px-4 py-2 text-sm outline-none transition-colors focus:border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={verifyEmailCode}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-dark"
+                      >
+                        Проверить
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendEmailCode}
+                        className="text-sm text-muted underline hover:text-foreground"
+                      >
+                        Отправить повторно
+                      </button>
+                    </div>
+                  )}
+                  {emailVerifyError && (
+                    <p className="mt-1 text-sm text-red-500">{emailVerifyError}</p>
+                  )}
                 </div>
-                {files.length > 0 && (
-                  <ul className="mt-2 space-y-1">
-                    {files.map((f, i) => (
-                      <li key={i} className="text-sm text-muted">
-                        📎 {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <p className="mt-1 text-xs text-muted">
-                  Загрузка файлов будет доступна в следующей версии. Пока приложите их к письму после отправки заявки.
-                </p>
-              </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="flex-1 rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-surface"
-                >
-                  Назад
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="flex-1 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? "Отправка..." : "Отправить заявку"}
-                </button>
+                {/* Phone */}
+                <div>
+                  <label className={labelCls}>Телефон</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+7 (___) ___-__-__"
+                      className={`flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary`}
+                    />
+                    {phone.trim().length >= 11 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // TODO: SMS verification — will be implemented when SMS service is configured
+                          alert("Подтверждение по SMS будет доступно в ближайшее время");
+                        }}
+                        className="whitespace-nowrap rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-muted transition-colors hover:border-primary hover:text-primary"
+                      >
+                        Подтвердить по SMS
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* City */}
+                <div>
+                  <label className={labelCls}>Город</label>
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Москва"
+                    className={inputCls}
+                  />
+                </div>
+
+                {/* Entity type */}
+                <div>
+                  <label className={labelCls}>Тип заказчика</label>
+                  <div className="mt-2 flex gap-2 flex-wrap">
+                    {ENTITY_TYPES.map((et) => (
+                      <button
+                        key={et.id}
+                        type="button"
+                        onClick={() => setEntityType(et.id)}
+                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          entityType === et.id
+                            ? "border-primary bg-blue-50 text-primary"
+                            : "border-border text-foreground hover:border-muted"
+                        }`}
+                      >
+                        {et.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Company name — only for company/sole_proprietor */}
+                {entityType !== "individual" && (
+                  <div>
+                    <label className={labelCls}>
+                      {entityType === "sole_proprietor" ? "Название ИП" : "Название компании"}
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder={entityType === "sole_proprietor" ? "ИП Иванов И.И." : "ООО «Компания»"}
+                      className={inputCls}
+                    />
+                  </div>
+                )}
               </div>
+            </section>
+
+            {/* === Section 2: Project === */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Информация о проекте</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className={labelCls}>
+                    Название заказа <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Например: Корпус датчика из алюминия, 500 шт"
+                    className={inputCls}
+                  />
+                </div>
+
+                <div>
+                  <label className={labelCls}>Опишите ваш проект</label>
+                  <textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    rows={4}
+                    placeholder="Расскажите подробности: что нужно изготовить, особые требования к качеству, допуски, покрытие, упаковка..."
+                    className={inputCls}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Количество</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="шт"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Желаемый срок поставки</label>
+                    <input
+                      type="date"
+                      value={deadline}
+                      onChange={(e) => setDeadline(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelCls}>Бюджет</label>
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      value={budgetMax}
+                      onChange={(e) => setBudgetMax(e.target.value)}
+                      placeholder="Сумма, ₽"
+                      className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                    />
+                    <select
+                      value={budgetType}
+                      onChange={(e) => setBudgetType(e.target.value as "per_unit" | "per_batch")}
+                      className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
+                    >
+                      <option value="per_batch">за всю партию</option>
+                      <option value="per_unit">за единицу</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* === Section 3: Delivery === */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Приёмка и доставка</h2>
+              <div className="space-y-2">
+                {DELIVERY_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.id}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      deliveryOption === opt.id
+                        ? "border-primary bg-blue-50"
+                        : "border-border hover:border-muted"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="delivery"
+                      value={opt.id}
+                      checked={deliveryOption === opt.id}
+                      onChange={(e) => setDeliveryOption(e.target.value)}
+                      className="mt-0.5"
+                    />
+                    <span className="text-sm">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </section>
+
+            {/* === Section 4: Files === */}
+            <section className={sectionCls}>
+              <h2 className={sectionTitleCls}>Файлы</h2>
+              <div className="rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary">
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,.step,.stp,.iges,.igs,.stl,.dwg,.dxf,.png,.jpg,.jpeg,.zip,.rar"
+                  onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <svg className="mx-auto h-10 w-10 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <p className="mt-2 text-sm text-muted">
+                    Чертежи, 3D-модели, фото — нажмите или перетащите
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    PDF, STEP, STL, DWG, DXF, PNG, JPG (до 25 МБ)
+                  </p>
+                </label>
+              </div>
+              {files.length > 0 && (
+                <ul className="mt-3 space-y-1">
+                  {files.map((f, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm text-muted">
+                      <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      {f.name} ({(f.size / 1024 / 1024).toFixed(1)} МБ)
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-xs text-muted">
+                Загрузка файлов будет доступна в следующей версии. Пока приложите их к письму после отправки заявки.
+              </p>
+            </section>
+
+            {/* === Submit === */}
+            <div className="pb-8">
+              {!emailVerified && (
+                <p className="mb-3 text-sm text-amber-600">
+                  Для отправки заявки необходимо подтвердить email
+                </p>
+              )}
+              <button
+                onClick={handleSubmit}
+                disabled={!canSubmit || submitting}
+                className="w-full rounded-lg bg-primary px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? "Отправка..." : "Отправить заявку"}
+              </button>
+              <p className="mt-3 text-center text-xs text-muted">
+                Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
+              </p>
             </div>
-          )}
+          </div>
         </div>
       </main>
       <Footer />
