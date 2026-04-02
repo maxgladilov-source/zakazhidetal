@@ -7,7 +7,6 @@ import Footer from "@/components/Footer";
 const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 const DELIVERY_OPTIONS = [
-  { id: "warehouse_china", label: "Со склада в Китае" },
   { id: "warehouse_russia", label: "Со склада в РФ (самовывоз)" },
   { id: "transport_company", label: "Доставка транспортной компанией" },
   { id: "undecided", label: "Решу позже" },
@@ -98,7 +97,6 @@ export default function ZayavkaPage() {
     };
   }, [resetSessionTimer]);
 
-  const isChinaDelivery = deliveryOption === "warehouse_china";
   const canSubmit = ndaAccepted && fullName.trim() && email.trim() && emailVerified && title.trim();
 
   // --- Email verification ---
@@ -148,10 +146,10 @@ export default function ZayavkaPage() {
           quantity: quantity ? Number(quantity) : undefined,
           budgetMax: budgetMax ? Number(budgetMax) : undefined,
           budgetType,
-          budgetCurrency: isChinaDelivery ? budgetCurrency : "RUB",
+          budgetCurrency: "RUB",
           orderStrategy,
           needPilot: needPilot !== "undecided" ? needPilot : undefined,
-          incoterms: isChinaDelivery && incoterms !== "none" ? incoterms : undefined,
+          incoterms: undefined,
           deliveryOption: deliveryOption !== "undecided" ? deliveryOption : undefined,
           deadlineDesired: deadline || undefined,
           freeText: freeText || undefined,
@@ -586,8 +584,10 @@ export default function ZayavkaPage() {
             <section className={sectionCls}>
               <h2 className={sectionTitleCls}>Коммерческие условия</h2>
               <p className={sectionDescCls}>Что для вас важнее и каков бюджет</p>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 mb-5">
-                Условия оплаты — <strong>100% предоплата</strong>. Детали обсудим после рассмотрения заявки.
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 mb-5 space-y-1">
+                <p>Рассмотрение заявки — <strong>бесплатно</strong>.</p>
+                <p>Согласование технических деталей с производством — платная услуга.</p>
+                <p>Изготовление партии деталей — <strong>100% предоплата</strong>, расчёты в рублях.</p>
               </div>
               <div className="space-y-5">
 
@@ -634,23 +634,10 @@ export default function ZayavkaPage() {
                       min="0"
                       value={budgetMax}
                       onChange={(e) => setBudgetMax(e.target.value)}
-                      placeholder={isChinaDelivery ? "Сумма" : "Сумма, ₽"}
+                      placeholder="Сумма, ₽"
                       className="flex-1 rounded-lg border border-border bg-white px-4 py-2.5 text-sm outline-none transition-colors focus:border-primary"
                     />
-                    {isChinaDelivery ? (
-                      <select
-                        value={budgetCurrency}
-                        onChange={(e) => setBudgetCurrency(e.target.value)}
-                        className="rounded-lg border border-border bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary"
-                      >
-                        <option value="RUB">₽ RUB</option>
-                        <option value="USD">$ USD</option>
-                        <option value="CNY">¥ CNY</option>
-                        <option value="EUR">€ EUR</option>
-                      </select>
-                    ) : (
-                      <span className="flex items-center px-3 text-sm text-muted">₽</span>
-                    )}
+                    <span className="flex items-center px-3 text-sm text-muted">₽</span>
                     <select
                       value={budgetType}
                       onChange={(e) => setBudgetType(e.target.value as "per_unit" | "per_batch")}
@@ -702,34 +689,6 @@ export default function ZayavkaPage() {
                   </p>
                 </div>
 
-                {/* Incoterms — only for China delivery */}
-                {isChinaDelivery && (
-                  <div>
-                    <label className={labelCls + " mb-2"}>Условия поставки (Incoterms)</label>
-                    <div className="flex gap-2 flex-wrap">
-                      {[
-                        { id: "EXW", label: "EXW", desc: "Самовывоз с завода" },
-                        { id: "FOB", label: "FOB", desc: "До порта отгрузки" },
-                        { id: "CIF", label: "CIF", desc: "До порта назначения" },
-                        { id: "none", label: "Не знаю", desc: "" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => setIncoterms(opt.id)}
-                          className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
-                            incoterms === opt.id
-                              ? "border-primary bg-blue-50 text-primary"
-                              : "border-border text-foreground hover:border-muted"
-                          }`}
-                        >
-                          <span className="font-medium">{opt.label}</span>
-                          {opt.desc && <span className="ml-1 text-xs text-muted">— {opt.desc}</span>}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </section>
 
